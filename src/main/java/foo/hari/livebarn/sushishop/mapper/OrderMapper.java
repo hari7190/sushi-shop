@@ -17,7 +17,7 @@ public class OrderMapper {
 
         return new OrderDTO(
                 entity.getId(),
-                entity.getStatus_id(),
+                entity.getStatusId(),
                 entity.getSushi_id(),
                 // Convert database LocalDateTime safely to an Instant (UTC)
                 entity.getCreatedAt() != null ? entity.getCreatedAt().toInstant(ZoneOffset.UTC) : null

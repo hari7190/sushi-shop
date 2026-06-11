@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
@@ -19,7 +20,10 @@ import java.time.LocalDateTime;
 @EntityListeners(AuditingEntityListener.class)
 public class SushiOrder {
         @Id @GeneratedValue(strategy = GenerationType.IDENTITY) int id;
-        @Column(nullable = false) int status_id;
+        @Column(name = "status_id", nullable = false)
+        private int statusId;
         @Column(nullable = false) int sushi_id;
+        @Column int remaining_time; // not accounting for sub minute diff
         @CreatedDate @Column(name = "created_at", nullable = false, updatable = false) LocalDateTime createdAt;
+        @LastModifiedDate @Column(name = "modified_at", nullable = false, updatable = false) LocalDateTime modifiedAt;
 }
