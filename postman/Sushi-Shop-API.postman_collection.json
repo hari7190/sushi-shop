@@ -1,0 +1,458 @@
+{
+  "info": {
+    "_postman_id": "sushi-shop-api-collection",
+    "name": "Sushi Shop API",
+    "description": "REST API collection for the Sushi Shop ",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:9000"
+    },
+    {
+      "key": "order_id",
+      "value": "1"
+    }
+  ],
+  "item": [
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Place Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Success response', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.code).to.eql(0);",
+                  "    pm.expect(json.msg).to.eql('Order Created');",
+                  "    pm.expect(json.order).to.have.property('id');",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    const orderId = pm.response.json().order.id;",
+                  "    pm.collectionVariables.set('order_id', orderId);",
+                  "    console.log('Saved order_id:', orderId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sushi_name\": \"California Roll\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"]
+            },
+            "description": "Create a new sushi order.\n\n**Body:** `sushi_name` — one of: California Roll, Kamikaze Roll, Dragon Eye"
+          },
+          "response": []
+        },
+        {
+          "name": "Place Order (Unknown Sushi)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Error response', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.code).to.eql(404);",
+                  "    pm.expect(json.msg).to.eql('No Sushi Found!');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sushi_name\": \"Unknown Roll\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"]
+            },
+            "description": "Error case — sushi name not in menu."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Order Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has status buckets', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('in-progress');",
+                  "    pm.expect(json).to.have.property('created');",
+                  "    pm.expect(json).to.have.property('paused');",
+                  "    pm.expect(json).to.have.property('cancelled');",
+                  "    pm.expect(json).to.have.property('completed');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "status"]
+            },
+            "description": "Returns all orders grouped by status with `orderId` and `timeSpent` for each."
+          },
+          "response": []
+        },
+        {
+          "name": "Pause Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Success response', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.code).to.eql(0);",
+                  "    pm.expect(json.msg).to.eql('Order paused');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{order_id}}/pause",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "{{order_id}}", "pause"]
+            },
+            "description": "Pause an order. Stops the chef if the order is in-progress. Sets DB status to `paused`."
+          },
+          "response": []
+        },
+        {
+          "name": "Resume Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Success response', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.code).to.eql(0);",
+                  "    pm.expect(json.msg).to.eql('Order resumed');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{order_id}}/resume",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "{{order_id}}", "resume"]
+            },
+            "description": "Resume a paused order. Sets status to `in-progress`; chef continues from remaining time with high priority."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Success response', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.code).to.eql(0);",
+                  "    pm.expect(json.msg).to.eql('Order cancelled');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{order_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "{{order_id}}"]
+            },
+            "description": "Cancel an order. Stops cooking if in-progress and sets DB status to `cancelled`."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Order (Not Found)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Error response', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.code).to.eql(404);",
+                  "    pm.expect(json.msg).to.eql('Order not found');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/99999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "99999"]
+            },
+            "description": "Error case — order does not exist."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Workflows",
+      "item": [
+        {
+          "name": "Full lifecycle (place → pause → resume → status)",
+          "item": [
+            {
+              "name": "1. Place Order",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Created', () => pm.response.to.have.status(201));",
+                      "pm.collectionVariables.set('order_id', pm.response.json().order.id);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"sushi_name\": \"California Roll\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/orders",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "orders"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "2. Get Status",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/orders/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "orders", "status"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "3. Pause Order",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/orders/{{order_id}}/pause",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "orders", "{{order_id}}", "pause"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "4. Get Status (paused)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/orders/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "orders", "status"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "5. Resume Order",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/orders/{{order_id}}/resume",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "orders", "{{order_id}}", "resume"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "6. Get Status (in-progress)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/orders/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "orders", "status"]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": "Run with Collection Runner in order. Wait a few seconds between steps if testing in-progress cooking."
+        },
+        {
+          "name": "Place and cancel",
+          "item": [
+            {
+              "name": "1. Place Order",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.collectionVariables.set('order_id', pm.response.json().order.id);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"sushi_name\": \"Kamikaze Roll\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/orders",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "orders"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "2. Cancel Order",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/orders/{{order_id}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "orders", "{{order_id}}"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "3. Get Status (cancelled)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/orders/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "orders", "status"]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

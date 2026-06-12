@@ -21,16 +21,27 @@ public class CookTask {
         }
 
         while (remaining > 0) {
+            if (handle.cancelRequested) {
+                orderService.updateRemainingTime(order, remaining);
+                orderService.cancelOrder(order.getId());
+                return;
+            }
             if (handle.pauseRequested) {
                 orderService.pauseOrder(order, remaining);
                 return;
             }
             try {
-                Thread.sleep(1000);  // 1-second ticks, not one 5-minute sleep
+                Thread.sleep(1000);
             } catch (InterruptedException e) {
+                if (handle.cancelRequested) {
+                    orderService.updateRemainingTime(order, remaining);
+                    orderService.cancelOrder(order.getId());
+                    return;
+                }
                 throw new RuntimeException(e);
             }
             remaining--;
+            orderService.updateRemainingTime(order, remaining);
         }
         orderService.finishOrder(order);
     }

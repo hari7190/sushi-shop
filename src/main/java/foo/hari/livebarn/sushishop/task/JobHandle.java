@@ -14,6 +14,7 @@ import java.util.concurrent.Future;
 public class JobHandle {
     int orderId;
     volatile boolean pauseRequested = false;
+    volatile boolean cancelRequested = false;
     Future<?> future;
 
     public JobHandle(int id) {

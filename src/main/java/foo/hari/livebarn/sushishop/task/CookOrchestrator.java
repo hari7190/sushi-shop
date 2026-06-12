@@ -78,15 +78,31 @@ public class CookOrchestrator  implements SmartLifecycle {
         }
     }
 
-    public void pauseOrder(SushiOrder order){
-        activeJobs.get(order.getId()).pauseRequested = true;
+    public boolean pauseOrder(int orderId) {
+        JobHandle handle = activeJobs.get(orderId);
+        if (handle != null) {
+            handle.pauseRequested = true;
+            return true;
+        }
+        return false;
+    }
+
+    public void cancelOrder(int orderId) {
+        JobHandle handle = activeJobs.get(orderId);
+        if (handle != null) {
+            handle.cancelRequested = true;
+            if (handle.future != null) {
+                handle.future.cancel(true);
+            }
+            activeJobs.remove(orderId);
+        }
     }
 
     private final Object claimLock = new Object();
 
     private Optional<SushiOrder> claimNext() {
         synchronized (claimLock) {
-            return this.orderService.claimNextCreatedOrder();
+            return this.orderService.claimNextOrder(activeJobs.keySet());
         }
     }
 
