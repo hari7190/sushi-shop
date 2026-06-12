@@ -1,10 +1,10 @@
 package foo.hari.livebarn.sushishop.service;
 
+import foo.hari.livebarn.sushishop.domain.OrderStatus;
 import foo.hari.livebarn.sushishop.dto.OrderStatusEntryDTO;
 import foo.hari.livebarn.sushishop.dto.OrderStatusResponseDTO;
 import foo.hari.livebarn.sushishop.entity.Sushi;
 import foo.hari.livebarn.sushishop.entity.SushiOrder;
-import foo.hari.livebarn.sushishop.repository.StatusRepository;
 import foo.hari.livebarn.sushishop.repository.SushiOrderRepository;
 import foo.hari.livebarn.sushishop.repository.SushiRepository;
 import org.springframework.stereotype.Service;
@@ -13,20 +13,18 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 public class OrderService {
 
-    private final StatusRepository statusRepository;
+    private final StatusRegistry statusRegistry;
     private final SushiOrderRepository sushiOrderRepository;
     private final SushiRepository sushiRepository;
 
-    public OrderService(StatusRepository statusRepository, SushiOrderRepository sushiOrderRepository, SushiRepository sushiRepository) {
-        this.statusRepository = statusRepository;
+    public OrderService(StatusRegistry statusRegistry, SushiOrderRepository sushiOrderRepository, SushiRepository sushiRepository) {
+        this.statusRegistry = statusRegistry;
         this.sushiOrderRepository = sushiOrderRepository;
         this.sushiRepository = sushiRepository;
     }
@@ -34,20 +32,20 @@ public class OrderService {
     public SushiOrder placeOrder(Sushi sushi){
         SushiOrder order = new SushiOrder();
         order.setSushi_id(sushi.getId());
-        order.setStatusId(statusRepository.getStatusByName("created").getId());
+        order.setStatusId(statusRegistry.id(OrderStatus.CREATED));
         order.setRemaining_time(sushi.getTimeToMake());
         sushiOrderRepository.save(order);
         return order;
     }
 
     public void finishOrder(SushiOrder order){
-        order.setStatusId(statusRepository.getStatusByName("finished").getId());
+        order.setStatusId(statusRegistry.id(OrderStatus.FINISHED));
         order.setRemaining_time(0);
         sushiOrderRepository.save(order);
     }
 
     public void pauseOrder(SushiOrder order, int remainingTime){
-        order.setStatusId(statusRepository.getStatusByName("paused").getId());
+        order.setStatusId(statusRegistry.id(OrderStatus.PAUSED));
         order.setRemaining_time(remainingTime);
         sushiOrderRepository.save(order);
     }
@@ -55,7 +53,7 @@ public class OrderService {
     public SushiOrder pauseOrder(int orderId) {
         SushiOrder order = sushiOrderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
-        order.setStatusId(statusRepository.getStatusByName("paused").getId());
+        order.setStatusId(statusRegistry.id(OrderStatus.PAUSED));
         sushiOrderRepository.save(order);
         return order;
     }
@@ -63,10 +61,10 @@ public class OrderService {
     public SushiOrder resumeOrder(int orderId) {
         SushiOrder order = sushiOrderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
-        if (order.getStatusId() != statusRepository.getStatusByName("paused").getId()) {
+        if (order.getStatusId() != statusRegistry.id(OrderStatus.PAUSED)) {
             throw new RuntimeException("Order cannot be resumed");
         }
-        order.setStatusId(statusRepository.getStatusByName("in-progress").getId());
+        order.setStatusId(statusRegistry.id(OrderStatus.IN_PROGRESS));
         sushiOrderRepository.save(order);
         return order;
     }
@@ -79,16 +77,14 @@ public class OrderService {
     public SushiOrder cancelOrder(int orderId) {
         SushiOrder order = sushiOrderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
-        order.setStatusId(statusRepository.getStatusByName("cancelled").getId());
+        order.setStatusId(statusRegistry.id(OrderStatus.CANCELLED));
         sushiOrderRepository.save(order);
         return order;
     }
 
     public OrderStatusResponseDTO getOrderStatus() {
-        Map<Integer, String> statusNamesById = statusRepository.findAll().stream()
-                .collect(Collectors.toMap(status -> status.getId(), status -> status.getName()));
-        Map<Integer, Integer> sushiTimesById = sushiRepository.findAll().stream()
-                .collect(Collectors.toMap(Sushi::getId, Sushi::getTimeToMake));
+        var sushiTimesById = sushiRepository.findAll().stream()
+                .collect(java.util.stream.Collectors.toMap(Sushi::getId, Sushi::getTimeToMake));
 
         List<OrderStatusEntryDTO> inProgress = new ArrayList<>();
         List<OrderStatusEntryDTO> created = new ArrayList<>();
@@ -97,18 +93,17 @@ public class OrderService {
         List<OrderStatusEntryDTO> completed = new ArrayList<>();
 
         for (SushiOrder order : sushiOrderRepository.findAll()) {
-            String statusName = statusNamesById.get(order.getStatusId());
+            OrderStatus status = statusRegistry.fromId(order.getStatusId());
             int timeToMake = sushiTimesById.get(order.getSushi_id());
             int timeSpent = timeToMake - order.getRemaining_time();
             OrderStatusEntryDTO entry = new OrderStatusEntryDTO(order.getId(), timeSpent);
 
-            switch (statusName) {
-                case "in-progress" -> inProgress.add(entry);
-                case "created" -> created.add(entry);
-                case "paused" -> paused.add(entry);
-                case "cancelled" -> cancelled.add(entry);
-                case "finished" -> completed.add(entry);
-                default -> { }
+            switch (status) {
+                case IN_PROGRESS -> inProgress.add(entry);
+                case CREATED -> created.add(entry);
+                case PAUSED -> paused.add(entry);
+                case CANCELLED -> cancelled.add(entry);
+                case FINISHED -> completed.add(entry);
             }
         }
 
@@ -124,8 +119,8 @@ public class OrderService {
 
     @Transactional
     public Optional<SushiOrder> claimNextOrder(Set<Integer> activeOrderIds) {
-        int inProgressId = statusRepository.getStatusByName("in-progress").getId();
-        int createdId = statusRepository.getStatusByName("created").getId();
+        int inProgressId = statusRegistry.id(OrderStatus.IN_PROGRESS);
+        int createdId = statusRegistry.id(OrderStatus.CREATED);
 
         Optional<SushiOrder> waitingInProgress = sushiOrderRepository
                 .findByStatusIdOrderByCreatedAtAsc(inProgressId)
@@ -146,8 +141,8 @@ public class OrderService {
 
     @Transactional
     public Optional<SushiOrder> claimNextCreatedOrder() {
-        int createdId = statusRepository.getStatusByName("created").getId();
-        int inProgressId = statusRepository.getStatusByName("in-progress").getId();
+        int createdId = statusRegistry.id(OrderStatus.CREATED);
+        int inProgressId = statusRegistry.id(OrderStatus.IN_PROGRESS);
         return sushiOrderRepository
                 .findFirstByStatusIdOrderByCreatedAtAsc(createdId)
                 .map(order -> {
