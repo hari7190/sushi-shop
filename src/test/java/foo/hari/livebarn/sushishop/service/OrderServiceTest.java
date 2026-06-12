@@ -23,7 +23,7 @@ import java.util.concurrent.Future;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
-@Import(OrderService.class)
+@Import({OrderService.class, StatusRegistry.class})
 class OrderServiceTest {
 
     @Autowired

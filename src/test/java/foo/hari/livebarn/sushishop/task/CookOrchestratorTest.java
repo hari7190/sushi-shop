@@ -62,7 +62,7 @@ class CookOrchestratorTest {
         JobHandle handle = new JobHandle(42);
         activeJobs(orchestrator).put(42, handle);
 
-        orchestrator.pauseOrder(order);
+        orchestrator.pauseOrder(order.getId());
 
         assertTrue(handle.pauseRequested);
     }
@@ -72,7 +72,7 @@ class CookOrchestratorTest {
         CountDownLatch firstBatchStarted = new CountDownLatch(3);
         CountDownLatch releaseWorkers = new CountDownLatch(1);
 
-        when(orderService.claimNextCreatedOrder())
+        when(orderService.claimNextOrder(any()))
                 .thenReturn(Optional.of(order(1)))
                 .thenReturn(Optional.of(order(2)))
                 .thenReturn(Optional.of(order(3)))
@@ -99,7 +99,7 @@ class CookOrchestratorTest {
 
     @Test
     void orchestrate_removesJobFromActiveJobsWhenWorkCompletes() throws Exception {
-        when(orderService.claimNextCreatedOrder())
+        when(orderService.claimNextOrder(any()))
                 .thenReturn(Optional.of(order(7)))
                 .thenReturn(Optional.empty());
 

@@ -60,6 +60,7 @@ class OrderControllerTest {
                                 {"sushi_name": "Unknown Roll"}
                                 """))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message", is("No Sushi Found!")));
+                .andExpect(jsonPath("$.code", is(404)))
+                .andExpect(jsonPath("$.msg", is("No Sushi Found!")));
     }
 }
